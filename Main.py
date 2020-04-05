@@ -1,8 +1,9 @@
 import GameFunctions
 import Classes
+import AI
 
 gameState = Classes.GameState()
-gameState = GameFunctions.startGame(gameState)
+#gameState = GameFunctions.startGame(gameState)
 
 #print(gameState.player1.cards[0])
 #print(gameState.player1.cards[1])
