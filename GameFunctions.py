@@ -1,6 +1,6 @@
 import random
 import itertools
-
+import AI_Playing
 
 ### INITIATION FUNCTIONS ###
 def initiateGame(gameState):
@@ -42,7 +42,17 @@ def startGame(gameState):
         showFelt(gameState)
         gameState = playRound(gameState)
     if not gameState.game_done:
-        decideWinningHand(gameState)
+        winner = decideWinningHand(gameState.player1.cards, gameState.player2.cards, gameState.felt)
+        if winner == 0:
+            pass
+        else:
+            if winner == 1:
+                gameState.player1.blinds += gameState.pot
+                gameState.pot = 0
+            else:
+                if winner == 2:
+                    gameState.player2.blinds += gameState.pot
+                    gameState.pot = 0
     return gameState
 
 
@@ -79,12 +89,17 @@ def dealCards(gameState):
     gameState.street = 'preflop'
     return gameState
 
-def playPreflop(gameState): ##TODO
+def playPreflop(gameState):
     gameState.round_done = False
+    gameState.street = 'preflop'
     if gameState.player1.isButton:
-        gameState.player2.hasAction = True
+        gameState.player1.hasAction = True
+        gameState.player2.blinds -= 1
+        gameState.pot += 1
     else:
         gameState.player2.hasAction = True
+        gameState.player1.blinds -= 1
+        gameState.pot += 1
     gameState = getBlinds(gameState)
     while gameState.round_done is False:
         showToAct(gameState)
@@ -107,63 +122,66 @@ def playRound(gameState):
     return gameState
 
 def chooseAction(gameState):
-    chosen_action = int(input())
     acting_player = getActingPlayer(gameState)
     unacting_player = getUnactingPlayer(gameState)
-    if gameState.last_action == "None":
+    if not acting_player.isAI:
+        chosen_action = int(input())
+    else:
+        chosen_action = AI_Playing.decide_action(gameState)
+
+    if gameState.last_action == "None" and gameState.street == 'preflop':
         if chosen_action == 1:
             gameState.last_action = "None"
             gameState.round_done = True
             gameState.game_done = True
             unacting_player.blinds += gameState.pot
         if chosen_action == 2:
+            gameState.last_action = "Call"
             acting_player.blinds -= 1
             gameState.pot += 1
-            gameState.last_action = "Call"
         if chosen_action == 3:
             acting_player.blinds -= 2
             gameState.pot += 2
             gameState.last_action = "Raise"
     else:
-        if gameState.last_action == "Bet":
+        if gameState.last_action == "None":
             if chosen_action == 1:
-                gameState.last_action = "None"
-                gameState.round_done = True
-                gameState.game_done = True
-                unacting_player.blinds += gameState.pot
+                gameState.last_action = "Check"
             if chosen_action == 2:
-                gameState.last_action = "None"
-                gameState.round_done = True
                 acting_player.blinds -= 1
                 gameState.pot += 1
-            if chosen_action == 3:
-                gameState.last_action = "Raise"
-                acting_player.blinds -= 1
-                gameState.pot += 1
+                gameState.last_action = "Bet"
         else:
-            if gameState.last_action == "Raise":
+            if gameState.last_action == "Bet":
                 if chosen_action == 1:
                     gameState.last_action = "None"
                     gameState.round_done = True
                     gameState.game_done = True
                     unacting_player.blinds += gameState.pot
-
                 if chosen_action == 2:
                     gameState.last_action = "None"
                     gameState.round_done = True
                     acting_player.blinds -= 1
                     gameState.pot += 1
+                if chosen_action == 3:
+                    gameState.last_action = "Raise"
+                    acting_player.blinds -= 1
+                    gameState.pot += 1
             else:
-                if gameState.last_action == "Check":
+                if gameState.last_action == "Raise":
                     if chosen_action == 1:
                         gameState.last_action = "None"
                         gameState.round_done = True
+                        gameState.game_done = True
+                        unacting_player.blinds += gameState.pot
+
                     if chosen_action == 2:
-                        gameState.last_action = "Bet"
+                        gameState.last_action = "None"
+                        gameState.round_done = True
                         acting_player.blinds -= 1
                         gameState.pot += 1
                 else:
-                    if gameState.last_action == "Call":
+                    if gameState.last_action == "Check":
                         if chosen_action == 1:
                             gameState.last_action = "None"
                             gameState.round_done = True
@@ -171,6 +189,15 @@ def chooseAction(gameState):
                             gameState.last_action = "Bet"
                             acting_player.blinds -= 1
                             gameState.pot += 1
+                    else:
+                        if gameState.last_action == "Call":
+                            if chosen_action == 1:
+                                gameState.last_action = "None"
+                                gameState.round_done = True
+                            if chosen_action == 2:
+                                gameState.last_action = "Bet"
+                                acting_player.blinds -= 1
+                                gameState.pot += 1
 
     if gameState.player1.hasAction:
         gameState.player1 = acting_player
@@ -202,20 +229,23 @@ def getBlinds(gameState):
 
 
 def showOptions(gameState):
-    if gameState.last_action == "None":
+    if gameState.last_action == "None" and gameState.street == 'preflop':
         print("1. Fold \n2. Call\n3. Raise")
     else:
-        if gameState.last_action == "Bet":
-            print("1. Fold\n2. Call\n3.Raise")
+        if gameState.last_action == "None":
+            print("\n1. Check\n2. Bet")
         else:
-            if gameState.last_action == "Raise":
-                print("1.Fold\n2.Call")
+            if gameState.last_action == "Bet":
+                print("1. Fold\n2. Call\n3.Raise")
             else:
-                if gameState.last_action == "Check":
-                    print("1.Check\n2.Bet")
+                if gameState.last_action == "Raise":
+                    print("1.Fold\n2.Call")
                 else:
-                    if gameState.last_action == "Call":
+                    if gameState.last_action == "Check":
                         print("1.Check\n2.Bet")
+                    else:
+                        if gameState.last_action == "Call":
+                            print("1.Check\n2.Bet")
 
 
 
@@ -415,9 +445,8 @@ def isFullHouse(hand):
     return False
 
 
-def getBetterHand(hand1, hand2):
-    index1 = 0
-    index2 = 0
+def getHandIndex(hand):
+    index = 0
     # High Card = 0
     # Pair      = 1
     # Two Pair  = 2
@@ -428,39 +457,38 @@ def getBetterHand(hand1, hand2):
     # 4OAK      = 7
     # Str. Flsh = 8
 
-    if isPair(hand1):
-        index1 = 1
-    if isTwoPair(hand1):
-        index1 = 2
-    if isThreeOfAKind(hand1):
-        index1 = 3
-    if isStraight(hand1):
-        index1 = 4
-    if isFlush(hand1):
-        index1 = 5
-    if isFullHouse(hand1):
-        index1 = 6
-    if isFourOfAKind(hand1):
-        index1 = 7
-    if isStraightFlush(hand1):
-        index1 = 8
+    if isPair(hand):
+        index = 1
+    if isTwoPair(hand):
+        index = 2
+    if isThreeOfAKind(hand):
+        index = 3
+    if isStraight(hand):
+        index = 4
+    if isFlush(hand):
+        index = 5
+    if isFullHouse(hand):
+        index = 6
+    if isFourOfAKind(hand):
+        index = 7
+    if isStraightFlush(hand):
+        index = 8
 
-    if isPair(hand2):
-        index2 = 1
-    if isTwoPair(hand2):
-        index2 = 2
-    if isThreeOfAKind(hand2):
-        index2 = 3
-    if isStraight(hand2):
-        index2 = 4
-    if isFlush(hand2):
-        index2 = 5
-    if isFullHouse(hand2):
-        index2 = 6
-    if isFourOfAKind(hand2):
-        index2 = 7
-    if isStraightFlush(hand2):
-        index2 = 8
+    return index
+
+
+def getBetterHand(hand1, hand2):
+    index1 = getHandIndex(hand1)
+    index2 = getHandIndex(hand2)
+    # High Card = 0
+    # Pair      = 1
+    # Two Pair  = 2
+    # 3OAK      = 3
+    # Straight  = 4
+    # Flush     = 5
+    # Full House= 6
+    # 4OAK      = 7
+    # Str. Flsh = 8
 
     if (index1 == index2) and (index1 != 6):
         count1 = countCards(hand1)
@@ -502,10 +530,9 @@ def getBetterHand(hand1, hand2):
         else:
             return hand2
 
-
 def getBetterHandIndex(hand1, hand2):
-    index1 = 0
-    index2 = 0
+    index1 = getHandIndex(hand1)
+    index2 = getHandIndex(hand2)
     # High Card = 0
     # Pair      = 1
     # Two Pair  = 2
@@ -515,40 +542,6 @@ def getBetterHandIndex(hand1, hand2):
     # Full House= 6
     # 4OAK      = 7
     # Str. Flsh = 8
-
-    if isPair(hand1):
-        index1 = 1
-    if isTwoPair(hand1):
-        index1 = 2
-    if isThreeOfAKind(hand1):
-        index1 = 3
-    if isStraight(hand1):
-        index1 = 4
-    if isFlush(hand1):
-        index1 = 5
-    if isFullHouse(hand1):
-        index1 = 6
-    if isFourOfAKind(hand1):
-        index1 = 7
-    if isStraightFlush(hand1):
-        index1 = 8
-
-    if isPair(hand2):
-        index2 = 1
-    if isTwoPair(hand2):
-        index2 = 2
-    if isThreeOfAKind(hand2):
-        index2 = 3
-    if isStraight(hand2):
-        index2 = 4
-    if isFlush(hand2):
-        index2 = 5
-    if isFullHouse(hand2):
-        index2 = 6
-    if isFourOfAKind(hand2):
-        index2 = 7
-    if isStraightFlush(hand2):
-        index2 = 8
 
     if (index1 == index2) and (index1 != 6):
         count1 = countCards(hand1)
@@ -586,9 +579,9 @@ def getBetterHandIndex(hand1, hand2):
 
     else:
         if index1 > index2:
-            return 0
+            return index1
         else:
-            return 1
+            return index2
 
 def decideWinningHand(hand1, hand2, felt):
     felt1 = []
@@ -646,3 +639,33 @@ def decideWinningHand(hand1, hand2, felt):
     else:
         return 2
 
+def getBestHandIndex(hand, felt):
+    total = hand + felt
+    util_vect = []
+    for i in range(len(total)):
+        util_vect.append(i)
+    combos = list(itertools.combinations(util_vect, 5))
+    if len(felt) == 3:
+        return getHandIndex(total)
+
+    initial_hand = []
+    for i in range(5):
+        initial_hand.append(total[i])
+
+    if len(felt) == 4:
+        target = 6
+    if len(felt) == 5:
+        target = 21
+    for i in range(target):
+        if i == 0:
+            pass
+        bestHandContender = []
+        for j in range(5):
+            bestHandContender.append(total[combos[i][j]])
+        winningHand = getBetterHand(initial_hand, bestHandContender)
+        if (winningHand != 0):
+            initial_hand = winningHand
+        else:
+            pass
+
+    return getHandIndex(initial_hand)

@@ -2,7 +2,7 @@ class Player:
     def __init__(self):
         self.cards = []
         self.button = False
-        self.blinds = 100
+        self.blinds = 0
         self.hasAction = False
         self.AI = False
 
@@ -27,7 +27,7 @@ class GameState:
         self.player2 = Player()
         self.cards = []
         self.felt = []
-        self.street = []
+        self.street = ''
         self.actions = []
         self.pot = 0
         self.round_done = False
